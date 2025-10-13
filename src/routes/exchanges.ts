@@ -25,7 +25,6 @@ export async function initExchangeRoutes(app: FastifyInstance) {
 
     const baseUrl =
       (app as any).serverUrl ||
-      EXCHANGE_SERVER_URL ||
       'http://localhost:8080'
 
     const exchangeUrl = `${baseUrl}/workflows/ephemeral/exchanges/${exchangeId}`
