@@ -1,77 +1,92 @@
-import type { FastifyInstance } from 'fastify'
-import { v4 as uuidv4 } from 'uuid'
-import { rpRequestCache, rpResponseCache } from '../utils/cache'
-import { EXCHANGE_SERVER_URL } from '../config.default'
+import type { FastifyInstance } from 'fastify';
+import { v4 as uuidv4 } from 'uuid';
+import { rpRequestCache, rpResponseCache } from '../utils/cache';
+import { EXCHANGE_SERVER_URL, RP_APP_URL } from '../config.default';
 
 export async function initExchangeRoutes(app: FastifyInstance) {
-  app.post('/workflows/ephemeral/exchanges', async (request, response) => {
-    const body = request.body as any
-    const requestData = body?.request
+  app.post('/workflows/ephemeral/exchanges', async (request, reply) => {
+    const body = request.body as any;
+    const requestData = body?.request;
+    console.log('🚀 ~ initExchangeRoutes ~ requestData:', requestData);
 
     if (!requestData) {
-      return response.status(400).send({ error: 'Missing "request" field' })
+      return reply.status(400).send({ error: 'Missing "request" field' });
     }
-    // if (!requestData.credentialRequestOrigin) {
-    //   return response.status(400).send({ error: 'Missing "credentialRequestOrigin" field' })
-    // }
 
-    const exchangeId = uuidv4()
-    const key = `exchange:${exchangeId}`
+    const exchangeId = uuidv4();
+    const key = `exchange:${exchangeId}`;
 
-    rpRequestCache.memoize({
-      key,
-      fn: async () => requestData
-    })
+    rpRequestCache.memoize({ key, fn: () => Promise.resolve(requestData) });
 
     const baseUrl =
-      EXCHANGE_SERVER_URL || (app as any).serverUrl || 'http://localhost:8080'
+      EXCHANGE_SERVER_URL || (app as any).serverUrl || 'http://localhost:8080';
 
-    const exchangeUrl = `${baseUrl}/workflows/ephemeral/exchanges/${exchangeId}`
+    const exchangeUrl = `${baseUrl}/workflows/ephemeral/exchanges/${exchangeId}`;
 
-    return response
+    return reply
       .code(201)
       .header('Location', exchangeUrl)
-      .send({ location: exchangeUrl })
-  })
+      .send({ location: exchangeUrl });
+  });
+  app.post(
+    '/workflows/ephemeral/exchanges/:exchangeId',
+    async (request, reply) => {
+      const { exchangeId } = request.params as { exchangeId: string };
+      const body = request.body;
+      const payload = JSON.stringify(body);
+      console.log('Incoming POST:', payload);
+      if (payload === '{}') {
+        console.log('Wallet initial POST detected, sending VPR query...');
+        const query = {
+          credentialRequestOrigin: RP_APP_URL,
+          verifiablePresentationRequest: {
+            query: [
+              {
+                type: 'QueryByExample',
+                credentialQuery: {
+                  reason:
+                    'Please present your Verifiable Credential to complete the verification process.',
+                  example: { type: ['VerifiableCredential'] },
+                },
+              },
+            ],
+          },
+        };
+        rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(query) });
+        return reply.code(200).send(query);
+      }
 
-  app.post('/workflows/ephemeral/exchanges/:exchangeId', async (request, response) => {
-    const { exchangeId } = request.params as any
-    const body = request.body as any
+      console.log('Wallet sent response body:', body);
+      rpResponseCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(body) });
 
-    const isEmpty = !body || (Object.keys(body).length === 0 && body.constructor === Object)
-    if (isEmpty) {
-      const cachedRequest = rpRequestCache.get(`exchange:${exchangeId}`)
-      if (!cachedRequest) return response.status(404).send()
-      return response.send(cachedRequest)
+      return reply.code(200).send(body);
     }
-    rpResponseCache.memoize({
-      key: `exchange:${exchangeId}`,
-      fn: async () => body
-    })
-    return response.code(200).send(body)
-  })
+  );
 
-  app.get('/workflows/ephemeral/exchanges/:exchangeId', async (request, response) => {
-    const { exchangeId } = request.params as any
-    const req = rpRequestCache.get(`exchange:${exchangeId}`)
-    if (!req) {
-      return response.status(404).send() // not created or expired
-    }
+  app.get(
+    '/workflows/ephemeral/exchanges/:exchangeId',
+    async (request, response) => {
+      const { exchangeId } = request.params as any;
+      const req = await rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+      if (!req) {
+        return response.status(404).send();
+      }
 
-    const res = rpResponseCache.get(`exchange:${exchangeId}`)
-    if (!res) {
+      const res = await rpResponseCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+      if (!res) {
+        return response.send({
+          id: exchangeId,
+          sequence: 0,
+          state: 'pending',
+        });
+      }
+
       return response.send({
         id: exchangeId,
-        sequence: 0,
-        state: 'pending'
-      })
+        sequence: 1,
+        state: 'complete',
+        response: res,
+      });
     }
-
-    return response.send({
-      id: exchangeId,
-      sequence: 1,
-      state: 'complete',
-      response: res
-    })
-  })
+  );
 }
