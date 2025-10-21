@@ -1,3 +1,4 @@
+import { LruCache } from '@digitalcredentials/lru-memoize';
 import type { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import { rpRequestCache, rpResponseCache } from '../utils/cache';
@@ -28,7 +29,7 @@ export async function initExchangeRoutes(app: FastifyInstance) {
       .header('Location', exchangeUrl)
       .send({ location: exchangeUrl });
   });
-
+  
   app.post(
     '/workflows/ephemeral/exchanges/:exchangeId',
     async (request, reply) => {
@@ -36,7 +37,7 @@ export async function initExchangeRoutes(app: FastifyInstance) {
       const body = request.body;
       const payload = JSON.stringify(body);
       if (payload === '{}') {
-        const req = await rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+        const req = await rpRequestCache.cache.get(`exchange:${exchangeId}`);
         if (!req) {
           return reply.status(404).send();
         }
@@ -50,13 +51,14 @@ export async function initExchangeRoutes(app: FastifyInstance) {
   app.get(
     '/workflows/ephemeral/exchanges/:exchangeId',
     async (request, response) => {
+
       const { exchangeId } = request.params as any;
-      const req = await rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+      const req = await rpRequestCache.cache.get(`exchange:${exchangeId}`);
       if (!req) {
         return response.status(404).send();
       }
 
-      const res = await rpResponseCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+      const res = await rpResponseCache.cache.get(`exchange:${exchangeId}`);
       if (!res) {
         return response.send({
           id: exchangeId,
