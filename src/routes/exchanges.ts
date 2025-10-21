@@ -28,37 +28,21 @@ export async function initExchangeRoutes(app: FastifyInstance) {
       .header('Location', exchangeUrl)
       .send({ location: exchangeUrl });
   });
+
   app.post(
     '/workflows/ephemeral/exchanges/:exchangeId',
     async (request, reply) => {
       const { exchangeId } = request.params as { exchangeId: string };
       const body = request.body;
       const payload = JSON.stringify(body);
-      console.log('Incoming POST:', payload);
       if (payload === '{}') {
-        console.log('Wallet initial POST detected, sending VPR query...');
-        const query = {
-          credentialRequestOrigin: RP_APP_URL,
-          verifiablePresentationRequest: {
-            query: [
-              {
-                type: 'QueryByExample',
-                credentialQuery: {
-                  reason:
-                    'Please present your Verifiable Credential to complete the verification process.',
-                  example: { type: ['VerifiableCredential'] },
-                },
-              },
-            ],
-          },
-        };
-        rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(query) });
-        return reply.code(200).send(query);
+        const req = await rpRequestCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(null) });
+        if (!req) {
+          return reply.status(404).send();
+        }
+        return reply.code(200).send(req);
       }
-
-      console.log('Wallet sent response body:', body);
       rpResponseCache.memoize({ key: `exchange:${exchangeId}`, fn: () => Promise.resolve(body) });
-
       return reply.code(200).send(body);
     }
   );
