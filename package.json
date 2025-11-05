@@ -10,6 +10,10 @@
     "build": "tsc",
     "start": "node dist/server.js"
   },
+  "engines": {
+    "pnpm": "10.20.0",
+    "node": ">=22"
+  },
   "dependencies": {
     "@digitalcredentials/lru-memoize": "^2.1.4",
     "@fastify/cors": "^11.1.0",
