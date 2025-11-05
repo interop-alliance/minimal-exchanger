@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
-    "start": "tsc && node dist/server.js"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@digitalcredentials/lru-memoize": "^2.1.4",
