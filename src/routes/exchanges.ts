@@ -1,8 +1,7 @@
-import { LruCache } from '@digitalcredentials/lru-memoize';
 import type { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import { rpRequestCache, rpResponseCache } from '../utils/cache';
-import { EXCHANGE_SERVER_URL, RP_APP_URL } from '../config.default';
+import { EXCHANGE_SERVER_URL } from '../config.default';
 
 export async function initExchangeRoutes(app: FastifyInstance) {
   app.post('/workflows/ephemeral/exchanges', async (request, reply) => {
@@ -29,7 +28,7 @@ export async function initExchangeRoutes(app: FastifyInstance) {
       .header('Location', exchangeUrl)
       .send({ location: exchangeUrl });
   });
-  
+
   app.post(
     '/workflows/ephemeral/exchanges/:exchangeId',
     async (request, reply) => {
