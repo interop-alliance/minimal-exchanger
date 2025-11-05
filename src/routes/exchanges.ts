@@ -4,6 +4,30 @@ import { rpRequestCache, rpResponseCache } from '../utils/cache';
 import { EXCHANGE_SERVER_URL } from '../config.default';
 
 export async function initExchangeRoutes(app: FastifyInstance) {
+  app.get('/', async (_, reply) => {
+    return reply.code(200).type('text/html')
+      .send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minimal Exchanger</title>
+  <link rel="stylesheet" href="/common/css/materialize.1.0.0.min.css" />
+</head>
+<body>
+<div class="container">
+  <h1>Minimal Exchanger</h1>
+  <p>
+    Version: <code>1.0.0</code>
+  </p>
+  <p>
+    Source code: <a href="https://github.com/interop-alliance/minimal-exchanger/"><code>https://github.com/interop-alliance/minimal-exchanger</code></a>
+  </p>
+</div>
+</body>
+</html>`)
+  })
+
   app.post('/workflows/ephemeral/exchanges', async (request, reply) => {
     const body = request.body as any;
     const requestData = body?.request;
