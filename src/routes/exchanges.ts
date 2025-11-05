@@ -18,7 +18,7 @@ export async function initExchangeRoutes(app: FastifyInstance) {
 <div class="container">
   <h1>Minimal Exchanger</h1>
   <p>
-    Version: <code>1.0.0</code>
+    Version: <code>1.1.0</code>
   </p>
   <p>
     Source code: <a href="https://github.com/interop-alliance/minimal-exchanger/"><code>https://github.com/interop-alliance/minimal-exchanger</code></a>
