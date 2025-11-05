@@ -3,7 +3,6 @@ import cors from '@fastify/cors'
 import { initExchangeRoutes } from './routes/exchanges'
 import { PORT, HOST } from './config.default'
 
-
 export async function createServer() {
   const app = Fastify({ logger: true })
 
